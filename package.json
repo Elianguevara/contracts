@@ -1,0 +1,49 @@
+{
+	"name": "ecotrace",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"description": "Sistema Integral de Gestión y Manifiestos de Residuos Peligrosos (MVP) — SvelteKit + Firebase",
+	"packageManager": "pnpm@9.15.0",
+	"engines": {
+		"node": ">=24"
+	},
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "vite preview",
+		"start": "node build",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"format": "prettier --write .",
+		"lint": "prettier --check .",
+		"emulators": "firebase emulators:start",
+		"emulators:storage": "firebase emulators:start --only storage --project ecotrace-ccf46",
+		"test:contracts": "cd contracts && forge test",
+		"test:functions": "cd functions && npm test",
+		"test:all": "npm run test:contracts && npm run test:functions && npm run check",
+		"build:all": "npm run build && cd functions && npm run build && cd ../contracts && forge build"
+	},
+	"devDependencies": {
+		"@sveltejs/adapter-node": "^5.2.9",
+		"@sveltejs/kit": "^2.15.1",
+		"@sveltejs/vite-plugin-svelte": "^5.0.3",
+		"@tailwindcss/vite": "^4.0.0",
+		"@types/node": "^24.0.0",
+		"firebase-tools": "13",
+		"prettier": "^3.4.2",
+		"prettier-plugin-svelte": "^3.3.2",
+		"prettier-plugin-tailwindcss": "^0.6.9",
+		"svelte": "^5.16.0",
+		"svelte-check": "^4.1.1",
+		"tailwindcss": "^4.0.0",
+		"typescript": "^5.7.2",
+		"vite": "^6.0.5"
+	},
+	"dependencies": {
+		"firebase": "^11.10.0",
+		"firebase-admin": "^13.10.0",
+		"pdfjs-dist": "^6.2.108",
+		"viem": "^2.55.19"
+	}
+}

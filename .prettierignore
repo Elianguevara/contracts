@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs & coverage
+build/
+dist/
+.svelte-kit/
+functions/lib/
+functions/coverage/
+coverage/
+
+# Submodules & contracts
+lib/
+contracts/
+contracts/out/
+contracts/cache/
+contracts/lib/
+contracts/broadcast/
+
+# Tooling / Logs / Configs
+.firebase/
+*-debug.log
+.claude/
+*.lock
+pnpm-lock.yaml
+package-lock.json

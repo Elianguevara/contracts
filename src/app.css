@@ -1,0 +1,63 @@
+@import 'tailwindcss';
+
+/*
+  Tailwind CSS v4: la configuración vive en CSS.
+  Tokens de marca EcoTrace y utilidades para la traza de residuos.
+
+  Ver DISENO-UX.md para la justificación de estos tokens (por qué "chain" está
+  separado de "brand", por qué IBM Plex, etc.) y el historial de decisiones.
+*/
+@theme {
+	/* Brand — identidad eco, acciones primarias cotidianas */
+	--color-brand-50: #ecfdf5;
+	--color-brand-100: #d1fae5;
+	--color-brand-500: #10b981;
+	--color-brand-600: #059669;
+	--color-brand-700: #047857;
+
+	/* Chain — reservado para todo lo que toca al contrato inteligente */
+	--color-chain-50: #eef2ff;
+	--color-chain-100: #e0e7ff;
+	--color-chain-300: #a5b4fc;
+	--color-chain-400: #818cf8;
+	--color-chain-500: #6366f1;
+	--color-chain-600: #4f46e5;
+	--color-chain-700: #4338ca;
+
+	/* Ink — superficie oscura tipo "libro mayor" para la evidencia on-chain */
+	--color-ink-700: #262f56;
+	--color-ink-800: #1a2140;
+	--color-ink-900: #11162b;
+	--color-ink-950: #0b0e1a;
+
+	/* Estados semánticos del anclaje blockchain (nombrados, no sueltos por el código) */
+	--color-status-pending: #d97706;
+	--color-status-pending-bg: #fef3e2;
+	--color-status-confirmed: #059669;
+	--color-status-confirmed-bg: #e7f8f1;
+	--color-status-failed: #dc2626;
+	--color-status-failed-bg: #fdecec;
+
+	/* Fondo de página — neutro con leve sesgo frío, no gris puro */
+	--color-paper: #f6f7fb;
+	--color-paper-alt: #eef0f7;
+
+	/* Tipografía: IBM Plex Sans (display + body) / IBM Plex Mono (hashes, direcciones, código) */
+	--font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+	--font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+:root {
+	color-scheme: light;
+}
+
+/* Utilidad para vistas "documento" (manifiestos/certificados) al imprimir */
+@media print {
+	.no-print {
+		display: none !important;
+	}
+	.print-sheet {
+		box-shadow: none !important;
+		border: none !important;
+	}
+}

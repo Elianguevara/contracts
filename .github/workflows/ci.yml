@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+# Cancel any in-progress run on the same branch when a new push arrives.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Job 1 — Frontend (SvelteKit): typecheck + lint
+  # ---------------------------------------------------------------------------
+  frontend:
+    name: Frontend — typecheck & lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck (svelte-check)
+        run: pnpm run check
+
+      - name: Lint (prettier)
+        run: pnpm run lint
+
+  # ---------------------------------------------------------------------------
+  # Job 2 — Cloud Functions: build + Vitest unit tests
+  # ---------------------------------------------------------------------------
+  functions:
+    name: Functions — build & tests
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: functions
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Install function dependencies
+        run: npm ci
+
+      - name: TypeScript build
+        run: npm run build
+
+      - name: Run Vitest unit tests
+        run: npm test
+
+  # ---------------------------------------------------------------------------
+  # Job 3 — Solidity contracts: Foundry build + full test suite
+  # ---------------------------------------------------------------------------
+  contracts:
+    name: Contracts — Foundry build & tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Cache Foundry build artifacts
+        uses: actions/cache@v4
+        with:
+          path: contracts/out
+          key: foundry-out-${{ hashFiles('contracts/src/**/*.sol', 'contracts/lib/**/*.sol') }}
+          restore-keys: foundry-out-
+
+      - name: Build contracts
+        working-directory: contracts
+        run: forge build
+
+      - name: Run contract tests (unit + fuzz + invariant)
+        working-directory: contracts
+        run: forge test -vvv

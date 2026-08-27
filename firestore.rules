@@ -1,0 +1,125 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function me() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
+    }
+
+    function myRole() {
+      return me().rol;
+    }
+
+    function isAdmin() {
+      return signedIn() && myRole() == 'ADMIN';
+    }
+
+    function isGenerador() {
+      return signedIn() && myRole() == 'GENERADOR';
+    }
+
+    function isOperador() {
+      return signedIn() && myRole() == 'OPERADOR';
+    }
+
+    function isAlmacenador() {
+      return signedIn() && myRole() == 'ALMACENADOR_TRANSITORIO';
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isActorInSolicitud(data) {
+      return signedIn() && (
+        data.generadorId == request.auth.uid ||
+        data.transportistaId == request.auth.uid ||
+        data.operadorId == request.auth.uid ||
+        (data.almacenadorId != null && data.almacenadorId == request.auth.uid)
+      );
+    }
+
+    function validSolicitudTransition(from, to) {
+      return (from == 'INICIADA' && (to == 'APROBADA' || to == 'RECHAZADA')) ||
+        (from == 'APROBADA' && to == 'MANIFIESTO_GENERADO') ||
+        (from == 'MANIFIESTO_GENERADO' && to == 'FINALIZADA') ||
+        from == to;
+    }
+
+    match /usuarios/{uid} {
+      allow read: if signedIn() && (isOwner(uid) || isAdmin());
+      allow create: if signedIn() && isOwner(uid);
+      allow update: if signedIn() && (isOwner(uid) || isAdmin());
+      allow delete: if false;
+    }
+
+    match /solicitudes/{solicitudId} {
+      allow read: if isAdmin() || isActorInSolicitud(resource.data);
+
+      allow create: if signedIn()
+        && (isGenerador() || isAlmacenador() || isAdmin())
+        && request.resource.data.estado == 'INICIADA'
+        && request.resource.data.generadorId == request.auth.uid;
+
+      allow update: if signedIn()
+        && validSolicitudTransition(resource.data.estado, request.resource.data.estado)
+        && request.resource.data.generadorId == resource.data.generadorId
+        && request.resource.data.transportistaId == resource.data.transportistaId
+        && request.resource.data.operadorId == resource.data.operadorId
+        && request.resource.data.almacenadorId == resource.data.almacenadorId
+        && (
+          isAdmin()
+          || (
+            isOperador()
+            && resource.data.operadorId == request.auth.uid
+            && (
+              (resource.data.estado == 'INICIADA' && (
+                request.resource.data.estado == 'APROBADA' ||
+                (request.resource.data.estado == 'RECHAZADA' && request.resource.data.observacionRechazo is string)
+              ))
+              || (resource.data.estado == 'MANIFIESTO_GENERADO' && request.resource.data.estado == 'FINALIZADA')
+            )
+          )
+          || (
+            (isGenerador() || isAlmacenador())
+            && resource.data.generadorId == request.auth.uid
+            && resource.data.estado == 'APROBADA'
+            && request.resource.data.estado == 'MANIFIESTO_GENERADO'
+          )
+        );
+
+      allow delete: if false;
+
+      match /reportes_recepcion/{reporteId} {
+        allow read: if isAdmin() || isActorInSolicitud(get(/databases/$(database)/documents/solicitudes/$(solicitudId)).data);
+        allow create: if isOperador()
+          && get(/databases/$(database)/documents/solicitudes/$(solicitudId)).data.operadorId == request.auth.uid;
+        allow update, delete: if false;
+      }
+
+      match /certificados/{certificadoId} {
+        allow read: if isAdmin() || isActorInSolicitud(get(/databases/$(database)/documents/solicitudes/$(solicitudId)).data);
+        allow create: if isOperador()
+          && get(/databases/$(database)/documents/solicitudes/$(solicitudId)).data.operadorId == request.auth.uid
+          && get(/databases/$(database)/documents/solicitudes/$(solicitudId)).data.estado == 'FINALIZADA';
+        allow update, delete: if false;
+      }
+    }
+
+    match /reportes_recepcion/{id} {
+      allow read, write: if false;
+    }
+
+    match /certificados/{id} {
+      allow read, write: if false;
+    }
+
+    // Contadores de folios (certificados): solo el backend (Admin SDK) los toca.
+    match /contadores/{id} {
+      allow read, write: if false;
+    }
+  }
+}

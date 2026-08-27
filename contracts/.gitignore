@@ -1,0 +1,26 @@
+# Foundry build artifacts
+out/
+cache/
+
+# Deployment broadcast artifacts
+# Excepción: descomenta la línea de abajo si querés commitear deployments de mainnet
+broadcast/
+
+# Coverage
+lcov.info
+coverage/
+
+# Environment (nunca commitear claves)
+.env
+.env.*
+!.env.example
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Claude Code (config local, no compartir)
+.claude/settings.local.json

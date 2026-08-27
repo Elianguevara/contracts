@@ -1,0 +1,31 @@
+{
+	"name": "ecotrace-functions",
+	"version": "0.1.0",
+	"private": true,
+	"description": "Cloud Functions (Node.js) para la generación de PDFs oficiales: manifiestos (original/duplicado/triplicado) y certificados, con hash SHA-256 (declaración jurada).",
+	"main": "lib/index.js",
+	"engines": {
+		"node": ">=24"
+	},
+	"scripts": {
+		"build": "tsc",
+		"build:watch": "tsc --watch",
+		"serve": "npm run build && firebase emulators:start --only functions",
+		"deploy": "firebase deploy --only functions",
+		"logs": "firebase functions:log",
+		"test": "vitest run",
+		"test:coverage": "vitest run --coverage"
+	},
+	"dependencies": {
+		"ethers": "^6.14.0",
+		"firebase-admin": "^13.0.1",
+		"firebase-functions": "^6.1.1",
+		"js-sha3": "^0.9.3",
+		"pdf-lib": "^1.17.1"
+	},
+	"devDependencies": {
+		"@vitest/coverage-v8": "^3.2.4",
+		"typescript": "^5.7.2",
+		"vitest": "^3.2.4"
+	}
+}

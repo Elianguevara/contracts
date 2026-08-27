@@ -1,0 +1,64 @@
+# OS / Editor
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*.swo
+
+# Claude Code (config local, no compartir)
+.claude/settings.local.json
+
+# Dependencias
+node_modules/
+functions/node_modules/
+.pnpm-store/
+
+# Build SvelteKit / adapter-node
+/build
+/.svelte-kit
+/package
+
+# Build Functions (TypeScript)
+functions/lib/
+
+# Build Foundry
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+contracts/coverage/
+contracts/lcov.info
+
+# forge install corrido por error desde la raíz en vez de contracts/
+/lib/
+
+# Environment (nunca commitear claves)
+.env
+.env.*
+!.env.example
+!.env.test
+!.env.local.example
+
+# Firebase
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+storage-debug.log*
+
+# Credenciales (NUNCA commitear)
+serviceAccountKey.json
+*-service-account*.json
+*.pem
+*.key
+
+# Logs
+*.log
+npm-debug.log*
+
+# Vite timestamps
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# Archivos locales de documentación
+README-LOCAL.md

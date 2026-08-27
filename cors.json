@@ -1,0 +1,19 @@
+[
+	{
+		"origin": ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:4173"],
+		"method": ["GET", "HEAD", "PUT", "POST", "DELETE"],
+		"responseHeader": [
+			"Content-Type",
+			"Content-Length",
+			"Content-Range",
+			"Content-Disposition",
+			"Authorization",
+			"User-Agent",
+			"x-goog-resumable",
+			"X-Firebase-Storage-Version",
+			"X-Goog-Upload-Protocol",
+			"X-Goog-Upload-Status"
+		],
+		"maxAgeSeconds": 3600
+	}
+]

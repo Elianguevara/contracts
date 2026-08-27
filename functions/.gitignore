@@ -1,0 +1,26 @@
+# Compilados TypeScript
+lib/
+
+# Dependencias
+node_modules/
+
+# Reportes de test (vitest --coverage)
+coverage/
+
+# Environment (nunca commitear claves)
+.env
+.env.*
+!.env.example
+!.env.local.example
+*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo

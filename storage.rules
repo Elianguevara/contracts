@@ -1,0 +1,31 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // Documentación de la solicitud (Plan de Contingencia / Hoja de Ruta).
+    // Sube el generador dueño (uid en la ruta); lectura para cualquier autenticado.
+    match /solicitudes/{uid}/{allPaths=**} {
+      allow read: if signedIn();
+      allow write: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.size < 15 * 1024 * 1024
+        && request.resource.contentType.matches('application/pdf');
+    }
+
+    // PDFs oficiales (manifiestos/certificados) generados por Cloud Functions.
+    // Solo lectura desde el cliente; la escritura la hace el backend con Admin SDK.
+    match /documentos/{allPaths=**} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // Todo lo demás, denegado.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,7 @@
+import { requireRole } from '$lib/auth/guards.server';
+import type { PageServerLoad } from './$types';
+
+export const load: PageServerLoad = async ({ locals }) => {
+	const user = requireRole(locals.user, ['ALMACENADOR_TRANSITORIO']);
+	return { user };
+};
