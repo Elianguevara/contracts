@@ -35,7 +35,8 @@ npm test                       # vitest run (all)
 npx vitest run <path>           # single test file
 npx vitest run -t "<name>"       # single test by name
 
-# contracts/ (Foundry)
+# contracts/ (Foundry) — first checkout on a machine needs the submodule:
+git submodule update --init --recursive   # populates lib/openzeppelin-contracts (which nests forge-std)
 cd contracts
 forge build
 forge test -vvv                                  # unit + fuzz (1000 runs) + invariant (256 runs)
@@ -147,6 +148,8 @@ download-token URL instead of `getSignedUrl()`.
   `ENTE_ESTATAL_ROLE` (`approveAsState`). **The backend relayer wallet needs both `RELAYER_ROLE`
   and `CERTIFICADOR_ROLE`** — it signs both call types with the same `RELAYER_PRIVATE_KEY`. Missing
   `CERTIFICADOR_ROLE` surfaces as `AccessControlUnauthorizedAccount` when anchoring certificates.
+  When deploying with `script/Deploy.s.sol`, set `CERTIFICADOR_ADDRESS` in `contracts/.env` to the
+  relayer's own address — it defaults to `address(0)` (role granted to no one) if unset.
 - Only `bytes32` hashes + `requestId` + timestamp go on-chain — no PII ever. End users don't hold
   wallets; anchoring is fully automatic via the relayer.
 - `functions/src/web3/registry-client.ts` (Ethers v6, retry) and `nonce-manager.ts` (Firestore
@@ -175,3 +178,6 @@ page reload when a generador submits a new solicitud.
 - Role → route mapping: `src/lib/auth/roles.ts`
 - Cloud Functions entry point: `functions/src/index.ts`
 - Web3 config/secret resolution: `functions/src/web3/config.ts`
+- Web3 phase-by-phase status (what's built vs. still pending, e.g. EIP-712 institutional
+  attestation, L2 migration): `ROADMAP-IMPLEMENTACION-WEB3.md`
+- Full Windows setup/troubleshooting walkthrough beyond the gotchas above: `GUIA-LEVANTAR-Y-PROBAR.md`
