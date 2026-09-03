@@ -146,6 +146,132 @@ Frontend (Viem read-only)
 > dirección del relayer. La atestación institucional con una wallet _distinta_ (Fase 7) todavía
 > no está implementada.
 
+## Verificación e interacción con el contrato (guía paso a paso)
+
+> Pensada para que cualquiera con un browser o una terminal — sin necesitar el código del repo ni
+> credenciales de producción — pueda auditar de forma independiente que el anclaje on-chain es
+> real y que los hashes no fueron falseados por el backend.
+
+Contrato **`EcoTraceRegistry`** en Sepolia:
+[`0xa3Aac5EAEF74f27927afD4d6792B5C33cC602113`](https://sepolia.etherscan.io/address/0xa3aac5eaef74f27927afd4d6792b5c33cc602113#code)
+— código fuente verificado ("Exact Match").
+
+### 1. Leer el contrato sin gastar ETH (Etherscan)
+
+1. Abrí el link de arriba y entrá a la pestaña **Contract → Read Contract**.
+2. Llamá `RELAYER_ROLE()`, `CERTIFICADOR_ROLE()` y `ENTE_ESTATAL_ROLE()` — cada una devuelve el
+   `bytes32` (keccak256 del nombre del rol) que identifica ese rol en `AccessControl`.
+3. Con ese valor, llamá `hasRole(role, account)` pasando la dirección de la wallet del relayer —
+   debe devolver `true` para **ambos** `RELAYER_ROLE` y `CERTIFICADOR_ROLE` (ver la nota en
+   [Roles](#roles) sobre por qué necesita los dos).
+4. Llamá `registered(bytes32)` con cualquier `documentHash` (ver el paso 2 para conseguir uno
+   real) — `true` confirma que ese hash específico ya fue anclado on-chain.
+
+Lo mismo se puede scriptear con Foundry (`cast`), sin abrir el browser:
+
+```bash
+RPC=https://rpc.sepolia.org   # o tu propio endpoint de Alchemy/Infura
+CONTRACT=0xa3Aac5EAEF74f27927afD4d6792B5C33cC602113
+
+# Constante de rol
+cast call $CONTRACT "RELAYER_ROLE()(bytes32)" --rpc-url $RPC
+
+# ¿La wallet del relayer tiene el rol?
+cast call $CONTRACT "hasRole(bytes32,address)(bool)" <RELAYER_ROLE_HASH> <RELAYER_ADDRESS> --rpc-url $RPC
+
+# ¿Este hash de documento fue anclado?
+cast call $CONTRACT "registered(bytes32)(bool)" <DOCUMENT_HASH> --rpc-url $RPC
+```
+
+### 2. Conseguir un hash y una tx real para verificar
+
+Cada `solicitudes/{id}` (y su subcolección `certificados/{cid}`) que llegó a
+`MANIFIESTO_GENERADO` o fue finalizada tiene un campo `blockchainAnchor` en Firestore
+([`src/lib/types/firestore.ts`](src/lib/types/firestore.ts)):
+
+```ts
+blockchainAnchor: {
+	documentHash: '0x...', // el hash que se ancló
+	status: 'confirmed',
+	txHash: '0x...', // hash de la transacción en Sepolia
+	blockNumber: 12345678,
+	network: '11155111'
+}
+```
+
+Podés conseguir estos valores de tres formas equivalentes (deberían coincidir entre sí):
+
+- Directamente en Firestore (Console o emulador), colección `solicitudes` / subcolección
+  `certificados`.
+- En el badge **BlockchainProof** de la UI (tarjeta de la solicitud en el dashboard) — trae un
+  link directo al explorador.
+- En el propio PDF del manifiesto/certificado: el hash Keccak-256 está impreso al pie ("Hash de
+  verificación (Keccak-256) — anclado en blockchain").
+
+### 3. Verificar la transacción en Etherscan
+
+1. Abrí `https://sepolia.etherscan.io/tx/<txHash>` con el `txHash` del paso anterior.
+2. Confirmá que **To** es el contrato de arriba y que el estado es **Success**.
+3. En **Input Data**, hacé click en "Decode Input Data": la función invocada debe ser
+   `registerDocument(string,bytes32,string)` (manifiestos) o `attestCertificate(string,bytes32)`
+   (certificados), y el parámetro `documentHash` debe coincidir **byte a byte** con el
+   `blockchainAnchor.documentHash` de Firestore y con el hash impreso en el PDF.
+4. En la pestaña **Logs**, confirmá que se emitió el evento `DocumentRegistered` (o
+   `CertificateAttested`) con ese mismo `documentHash`.
+
+Si los tres valores — PDF, Firestore y transacción on-chain — coinciden, el documento quedó
+anclado de forma inmutable y verificable por un tercero, sin tener que confiar en el backend de
+EcoTrace.
+
+### 4. Probar el flujo de escritura en un sandbox local (sin gastar ETH real)
+
+Para ejecutar `registerDocument` / `attestCertificate` de punta a punta sin tocar Sepolia ni
+necesitar la clave privada de producción, usá Anvil. Por defecto `Deploy.s.sol` usa la **cuenta #0
+de Anvil** como deployer, admin _y_ relayer a la vez, así que ya sale con `RELAYER_ROLE` listo:
+
+```bash
+# Terminal 1 — nodo local
+anvil
+
+# Terminal 2 — deploy
+cd contracts
+forge script script/Deploy.s.sol --rpc-url http://127.0.0.1:8545 --broadcast
+# copiá la dirección impresa en "EcoTraceRegistry desplegado exitosamente en: 0x..."
+CONTRACT=<pegar la dirección>
+ANVIL_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80  # cuenta #0, ver script/Deploy.s.sol
+
+# La cuenta #0 ya tiene RELAYER_ROLE: anclá un hash de prueba
+DOC_HASH=$(cast keccak "documento de prueba")
+cast send $CONTRACT "registerDocument(string,bytes32,string)" "req-123" $DOC_HASH "MANIFIESTO_GENERADO" \
+  --rpc-url http://127.0.0.1:8545 --private-key $ANVIL_KEY
+
+# Confirmá que quedó registrado
+cast call $CONTRACT "registered(bytes32)(bool)" $DOC_HASH --rpc-url http://127.0.0.1:8545
+
+# Para probar attestCertificate, la cuenta #0 (es admin) se auto-otorga CERTIFICADOR_ROLE primero:
+CERT_ROLE=$(cast call $CONTRACT "CERTIFICADOR_ROLE()(bytes32)" --rpc-url http://127.0.0.1:8545)
+ADMIN_ADDR=$(cast wallet address --private-key $ANVIL_KEY)
+cast send $CONTRACT "grantRole(bytes32,address)" $CERT_ROLE $ADMIN_ADDR \
+  --rpc-url http://127.0.0.1:8545 --private-key $ANVIL_KEY
+cast send $CONTRACT "attestCertificate(string,bytes32)" "cert-123" $(cast keccak "certificado de prueba") \
+  --rpc-url http://127.0.0.1:8545 --private-key $ANVIL_KEY
+```
+
+> Las 10 cuentas y claves privadas que imprime `anvil` al arrancar son públicas y conocidas —
+> nunca las uses en una red real.
+
+### Referencia rápida — funciones del contrato
+
+| Función                                                                      | Rol requerido              | Efecto                                                                   |
+| ----------------------------------------------------------------------------- | --------------------------- | -------------------------------------------------------------------------- |
+| `registerDocument(string requestId, bytes32 documentHash, string eventType)`  | `RELAYER_ROLE`              | Ancla un manifiesto/evento. Revierte (`AlreadyRegistered`) si el hash ya existe. |
+| `attestCertificate(string requestId, bytes32 documentHash)`                   | `CERTIFICADOR_ROLE`         | Atestigua un certificado. Misma protección anti-duplicado.                 |
+| `approveAsState(string requestId)`                                            | `ENTE_ESTATAL_ROLE`         | Emite una aprobación estatal (evento `StateApproval`; no persiste hash).   |
+| `registered(bytes32) view returns (bool)`                                     | Público                     | Consulta si un hash ya fue anclado.                                        |
+| `hasRole(bytes32 role, address account) view returns (bool)`                  | Público (`AccessControl`)   | Consulta si una dirección tiene un rol.                                    |
+
+---
+
 ## Máquina de estados
 
 ```text
